@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
+					   xmlns:s="library://ns.adobe.com/flex/spark"
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   width="352" height="190"
+					   applicationComplete="app_applicationCompleteHandler(event)"
+					   closing="app_closingHandler(event)"
+					   showStatusBar="false">
+	<fx:Style source="dungeon_toolkit.css"/>
+	<fx:Script>
+		<![CDATA[
+			import formats.MessageSending;
+			import formats.Settings;
+			
+			import io.CheckUpdate;
+			import io.ReadFile;
+			import io.WriteFile;
+			
+			import json.JSON;
+			
+			import logic.AUTHORIZER;
+			import logic.INTRODUCER;
+			import logic.PORTAL;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			
+			import spark.events.TextOperationEvent;
+			
+			import str.STR;
+			
+			private var _loader:URLLoader;
+			private var isLinking:Boolean=false;
+			public const UPDATE_ADDRESS	:String="http://www.goddessfantasy.net/bbs/index.php?topic=61623.0";			
+			private const AVBOT_ADDRESS	:String="http://localhost:6176/message";
+			private function newRequest():URLRequest{return new URLRequest(AVBOT_ADDRESS);}
+			
+			protected function btnStart_clickHandler(event:MouseEvent):void
+			{
+				if (isLinking==false){
+					beginListen();
+					txtGrpnum.enabled=false;
+					btnStart.label="停止侦听";
+					isLinking=true;
+					this.sendMessage("欢迎使用 \"地牢里的小工具箱\"\n任何使用方法使用 help 查询\n可能会抽疯，开启后过一会儿就正常响应命令了");
+				}else{
+					finishListen();
+					txtGrpnum.enabled=true;
+					btnStart.label="开始侦听";
+					isLinking=false;
+				}
+				
+				function beginListen():void
+				{
+					_loader = new URLLoader();
+					_loader.addEventListener(Event.COMPLETE, onComplete_beginListen);
+					_loader.addEventListener(IOErrorEvent.IO_ERROR,onError_beginListen);
+					_loader.load(newRequest());
+					
+					function onError_beginListen(event:Event):void
+					{
+						//trace("timeout");
+						_loader.load(newRequest());
+					}
+					
+					function onComplete_beginListen(event:Event):void
+					{
+						//trace(_loader.data);
+						var obj:*=json.JSON.decode(_loader.data);
+						if (obj.channel==txtGrpnum.text)
+						{
+							var t:String=obj.message.text;
+							if(obj.who.card!="")
+							{
+								getMessage(obj.who.qqnumber, obj.who.card, t.substring(0,t.length-1));
+							}else{
+								getMessage(obj.who.qqnumber, obj.who.nick, t.substring(0,t.length-1));
+							}
+						}
+						_loader.load(newRequest());
+					}
+				}
+				
+				function finishListen():void
+				{
+					_loader.close();
+				}
+			}
+			
+			protected function btnSend_clickHandler(event:MouseEvent):void
+			{
+				sendMessage(txtMsg.text);
+			}
+			
+			//---------------------------华丽的分割线---------------------------
+			private function sendMessage(m:String):void
+			{
+				if (m==null) return;
+				var jm:MessageSending=new MessageSending;
+				jm.channel=txtGrpnum.text;
+				jm.message.text=m;
+				
+				var request:URLRequest = newRequest();
+				request.method = URLRequestMethod.POST;
+				request.data=json.JSON.encode(jm);
+				var ul:URLLoader=new URLLoader(request);
+				ul.addEventListener(IOErrorEvent.IO_ERROR,onError_sendMessage);
+				
+				function onError_sendMessage(event:Event):void
+				{
+					//不知为何会出错，反正信息能发出去
+					//trace(event);
+				}
+			}
+			
+			private function getMessage(qqnum:String, nick:String, text:String):void
+			{
+				if(text=="help") {sendMessage(logic.INTRODUCER.help());return}
+				sendMessage(logic.PORTAL.portal(qqnum,nick,text));
+			}
+			
+			public function versionReceived(text:String):void
+			{
+				var version:String=STR.between(text);
+				if(version==null) return;
+				if(version!="v1.0") 
+				{
+					Alert.show("有新的版本："+version+"，是否更新？","更新提示",Alert.YES|Alert.NO,null,
+						function(event:CloseEvent):void{
+							if(event.detail==Alert.YES){
+								navigateToURL(new URLRequest(UPDATE_ADDRESS), "_blank");
+						}});
+				}
+			}
+			
+			//---------------------------华丽的分割线---------------------------
+			protected function txt_focusInHandler(event:Event):void
+			{
+				event.target.selectAll();
+			}
+			
+			protected function app_closingHandler(event:Event):void
+			{
+				if(isLinking) _loader.close();
+				//trace("closing");
+			}
+			
+			protected function app_applicationCompleteHandler(event:FlexEvent):void
+			{
+				AUTHORIZER.app=this;
+				mx.core.FlexGlobals.topLevelApplication.styleManager
+					.getStyleDeclaration("mx.controls.ToolTip").setStyle("fontSize","12");
+				mx.core.FlexGlobals.topLevelApplication.styleManager
+					.getStyleDeclaration("mx.controls.ToolTip").setStyle("font","宋体");
+				
+				var obj:*=json.JSON.decode(io.ReadFile("settings.txt",'{"au2":"","au1":"","grpnum":""}'));
+				txtGrpnum.text=obj.grpnum;
+				txtAu1.text=obj.au1;
+				txtAu2.text=obj.au2;
+				
+				io.CheckUpdate();				
+			}
+			
+			protected function txt_changeHandler(event:TextOperationEvent):void
+			{
+				// TODO Auto-generated method stub
+				var obj:formats.Settings=new Settings;
+				
+				obj.grpnum=txtGrpnum.text;
+				obj.au1=txtAu1.text;
+				obj.au2=txtAu2.text;
+				
+				io.WriteFile("settings.txt",json.JSON.encode(obj));
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Image x="195" y="36" alpha="0.5" scaleX="1.2" scaleY="1.2" smooth="true" source="icons/128.png"/>
+	
+	<s:Label x="24" y="27" text="活动群号"/>
+	<s:TextInput id="txtGrpnum" x="93" y="22" change="txt_changeHandler(event)"
+				 contentBackgroundAlpha="0.3" focusIn="txt_focusInHandler(event)"/>
+	<s:Button id="btnStart" x="229" y="22" label="开始侦听" alpha="0.85" click="btnStart_clickHandler(event)"/>
+	
+	<s:Label x="24" y="67" text="发送信息"/>
+	<s:TextInput id="txtMsg" x="93" y="62" change="txt_changeHandler(event)"
+				 contentBackgroundAlpha="0.3" focusIn="txt_focusInHandler(event)" text="test"/>
+	<s:Button id="btnSend" x="229" y="62" label="发送信息" alpha="0.85" click="btnSend_clickHandler(event)"/>
+	
+	<s:Label x="24" y="107" text="组织者QQ"/>
+	<s:TextInput id="txtAu1" x="93" y="102" contentBackgroundAlpha="0.3"
+				 focusIn="txt_focusInHandler(event)"/>
+	
+	<s:Label x="24" y="147" text="备用账号"/>
+	<s:TextInput id="txtAu2" x="93" y="142" change="txt_changeHandler(event)"
+				 contentBackgroundAlpha="0.3" focusIn="txt_focusInHandler(event)"/>
+	
+	<s:Label x="308" y="24" width="18" height="18" backgroundAlpha="0.15" backgroundColor="#000000"
+			 fontWeight="bold" text="?" textAlign="center"
+			 toolTip="将组织者、玩家、机器人的QQ账号共同所在的群号，填写于此。请确保 avbot 配置且登陆成功，方可正常使用" verticalAlign="middle"/>
+	<s:Label x="229" y="104" width="18" height="18" backgroundAlpha="0.15" backgroundColor="#000000"
+			 fontWeight="bold" text="?" textAlign="center" toolTip="将QQ账号填写于此，对应账号获得组织者权限"
+			 verticalAlign="middle"/>
+	<s:Label x="229" y="144" width="18" height="18" backgroundAlpha="0.15" backgroundColor="#000000"
+			 fontWeight="bold" text="?" textAlign="center" toolTip="备用的组织者QQ账号，权限相同"
+			 verticalAlign="middle"/>
+</s:WindowedApplication>
