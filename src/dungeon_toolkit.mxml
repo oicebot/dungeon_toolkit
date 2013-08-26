@@ -43,7 +43,7 @@
 					txtGrpnum.enabled=false;
 					btnStart.label="停止侦听";
 					isLinking=true;
-					this.sendMessage("欢迎使用 \"地牢里的小工具箱\"\n任何使用方法使用 help 查询\n可能会抽疯，开启后过一会儿就正常响应命令了");
+					this.sendMessage("欢迎使用 \"地牢里的小工具箱\"\n任何使用方法使用 help 查询\n刚开启时可能抽疯，过会儿就正常响应了");
 				}else{
 					finishListen();
 					txtGrpnum.enabled=true;
@@ -66,7 +66,7 @@
 					
 					function onComplete_beginListen(event:Event):void
 					{
-						//trace(_loader.data);
+						trace(_loader.data);
 						var obj:*=json.JSON.decode(_loader.data);
 						if (obj.channel==txtGrpnum.text)
 						{
@@ -116,15 +116,15 @@
 			
 			private function getMessage(qqnum:String, nick:String, text:String):void
 			{
-				if(text=="help") {sendMessage(logic.INTRODUCER.help());return}
-				sendMessage(logic.PORTAL.portal(qqnum,nick,text));
+				//if(text=="help") {sendMessage(logic.INTRODUCER.help());return}
+				sendMessage(logic.PORTAL.portal(qqnum,nick,STR.trim(text)));
 			}
 			
 			public function versionReceived(text:String):void
 			{
 				var version:String=STR.between(text);
 				if(version==null) return;
-				if(version!="v1.0") 
+				if(version!="v1.1") 
 				{
 					Alert.show("有新的版本："+version+"，是否更新？","更新提示",Alert.YES|Alert.NO,null,
 						function(event:CloseEvent):void{

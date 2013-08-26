@@ -36,7 +36,25 @@ package str
 	
 		public static function trim(text:String):String
 		{
-			return StringUtil.trim(text);
+			var t:String=text;
+			var l:int
+			var c:String;
+			
+			do
+			{
+				l=t.length;
+				c=t.charAt(0);
+				if (c==" "||c=="\n"||c=="\r") t=t.substring(1);
+			} while (l>t.length);
+			
+			do
+			{
+				l=t.length;
+				c=t.charAt(t.length-1);
+				if (c==" "||c=="\n"||c=="\r") t=t.substring(0,t.length-1);
+			} while (l>t.length);
+			
+			return t;
 		}
 		
 		public static function split(text:String,seperator:String="@"):Array

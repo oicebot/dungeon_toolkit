@@ -122,11 +122,11 @@ package logic
 		
 		public static function showList():String
 		{
+			if(units.length==0) return "当前发言列表为空";
 			var r:String= "当前发言顺序为 ";
 			for (var i:int=0;i<units.length;i++)
 			{
-				r=r+units[i];
-				if(i!=units.length-1){r=r+", "};
+				r=r+"@"+units[i]+" ";
 			}
 			return r;
 		}
